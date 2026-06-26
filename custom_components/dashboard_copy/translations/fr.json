@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Copier un dashboard",
+        "description": "Duplique un dashboard existant vers un nouveau.",
+        "data": {
+          "source": "Dashboard à copier",
+          "new_title": "Titre du nouveau dashboard",
+          "new_url_path": "URL (optionnel, ex : salon-copie)",
+          "update_links": "Réécrire les liens de navigation vers le nouveau dashboard"
+        }
+      }
+    },
+    "error": {
+      "source_not_found": "Le dashboard sélectionné n'existe plus.",
+      "url_taken": "Cette URL est déjà utilisée par un autre dashboard.",
+      "load_failed": "Impossible de lire la configuration du dashboard source.",
+      "create_failed": "Impossible de créer le nouveau dashboard.",
+      "save_failed": "Le dashboard a été créé mais son contenu n'a pas pu être enregistré.",
+      "unknown": "Erreur inattendue. Consulte les logs Home Assistant."
+    },
+    "abort": {
+      "no_dashboards": "Aucun dashboard copiable trouvé.",
+      "copy_successful": "Dashboard copié vers /{url}. Recharge la page (Ctrl+Maj+R) pour le voir dans la barre latérale."
+    }
+  }
+}

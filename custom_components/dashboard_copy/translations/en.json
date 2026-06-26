@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Copy a dashboard",
+        "description": "Duplicate an existing dashboard into a new one.",
+        "data": {
+          "source": "Dashboard to copy",
+          "new_title": "New dashboard title",
+          "new_url_path": "URL path (optional, e.g. living-room-copy)",
+          "update_links": "Rewrite navigation links to point at the new dashboard"
+        }
+      }
+    },
+    "error": {
+      "source_not_found": "The selected dashboard no longer exists.",
+      "url_taken": "That URL path is already used by another dashboard.",
+      "load_failed": "Could not read the source dashboard configuration.",
+      "create_failed": "Could not create the new dashboard.",
+      "save_failed": "The new dashboard was created but its content could not be saved.",
+      "unknown": "Unexpected error. Check the Home Assistant logs."
+    },
+    "abort": {
+      "no_dashboards": "No copyable dashboard was found.",
+      "copy_successful": "Dashboard copied to /{url}. Hard-refresh the page (Ctrl+Shift+R) to see it in the sidebar."
+    }
+  }
+}
