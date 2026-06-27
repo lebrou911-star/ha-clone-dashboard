@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 import logging
 from typing import Any
 
@@ -43,6 +44,31 @@ def _get_lovelace(hass: HomeAssistant):
         return hass.data[LOVELACE_DATA]
     except (ImportError, KeyError):
         return hass.data["lovelace"]
+
+
+def _get_dashboards_collection(lovelace: Any):
+    """Locate the storage DashboardsCollection regardless of HA version.
+
+    The attribute holding it on LovelaceData has been renamed across versions
+    (``dashboards_collection`` / ``dashboard_collection`` / dict key), so fall
+    back to identifying it by its class instead of a fixed name.
+    """
+    for attr in ("dashboards_collection", "dashboard_collection"):
+        coll = getattr(lovelace, attr, None)
+        if coll is not None:
+            return coll
+
+    if isinstance(lovelace, dict):
+        candidates: list[Any] = list(lovelace.values())
+    elif dataclasses.is_dataclass(lovelace):
+        candidates = [getattr(lovelace, f.name, None) for f in dataclasses.fields(lovelace)]
+    else:
+        candidates = list(getattr(lovelace, "__dict__", {}).values())
+
+    for value in candidates:
+        if type(value).__name__ == "DashboardsCollection":
+            return value
+    return None
 
 
 def _normalize_url_path(value: str) -> str:
@@ -120,8 +146,13 @@ async def async_perform_copy(
         source_url = source_key if source_key is not None else DEFAULT_SENTINEL
         _rewrite_navigation(new_config, source_url, new_url)
 
+    collection = _get_dashboards_collection(lovelace)
+    if collection is None:
+        _LOGGER.error("Could not locate the lovelace DashboardsCollection")
+        raise CopyError("create_failed")
+
     try:
-        await lovelace.dashboards_collection.async_create_item(
+        await collection.async_create_item(
             {
                 "url_path": new_url,
                 "title": new_title or new_url,

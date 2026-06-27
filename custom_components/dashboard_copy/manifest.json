@@ -8,5 +8,5 @@
   "integration_type": "service",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/lebrou911-star/ha-clone-dashboard/issues",
-  "version": "0.1.2"
+  "version": "0.1.3"
 }
