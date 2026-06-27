@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import copy
-import dataclasses
 import logging
 from typing import Any
 
@@ -13,6 +12,12 @@ from homeassistant.util import slugify
 from .const import DEFAULT_SENTINEL
 
 _LOGGER = logging.getLogger(__name__)
+
+# Home Assistant's lovelace domain and storage panel mode.
+_LOVELACE_DOMAIN = "lovelace"
+_MODE_STORAGE = "storage"
+_DEFAULT_ICON = "mdi:view-dashboard"
+_WS_CREATE_COMMAND = "lovelace/dashboards/create"
 
 # Human-readable messages keyed by CopyError.code.
 ERROR_MESSAGES: dict[str, str] = {
@@ -46,29 +51,76 @@ def _get_lovelace(hass: HomeAssistant):
         return hass.data["lovelace"]
 
 
-def _get_dashboards_collection(lovelace: Any):
-    """Locate the storage DashboardsCollection regardless of HA version.
+def _find_live_dashboards_collection(hass: HomeAssistant):
+    """Return the running DashboardsCollection, or None if unreachable.
 
-    The attribute holding it on LovelaceData has been renamed across versions
-    (``dashboards_collection`` / ``dashboard_collection`` / dict key), so fall
-    back to identifying it by its class instead of a fixed name.
+    Recent HA versions no longer expose the collection on LovelaceData, so we
+    recover it from the registered ``lovelace/dashboards/create`` websocket
+    command, whose handler is bound to the StorageCollectionWebsocket that holds
+    the live collection. Using the live instance means HA's own listener wires
+    the new dashboard into the sidebar and the dashboards registry for us.
     """
-    for attr in ("dashboards_collection", "dashboard_collection"):
-        coll = getattr(lovelace, attr, None)
-        if coll is not None:
-            return coll
-
-    if isinstance(lovelace, dict):
-        candidates: list[Any] = list(lovelace.values())
-    elif dataclasses.is_dataclass(lovelace):
-        candidates = [getattr(lovelace, f.name, None) for f in dataclasses.fields(lovelace)]
-    else:
-        candidates = list(getattr(lovelace, "__dict__", {}).values())
-
-    for value in candidates:
+    # Some versions may still keep it directly in hass.data.
+    for value in hass.data.values():
         if type(value).__name__ == "DashboardsCollection":
             return value
+
+    for value in hass.data.values():
+        if not isinstance(value, dict) or _WS_CREATE_COMMAND not in value:
+            continue
+        entry = value[_WS_CREATE_COMMAND]
+        handler = entry[0] if isinstance(entry, (tuple, list)) else entry
+        ws_obj = getattr(handler, "__self__", None)
+        coll = getattr(ws_obj, "storage_collection", None)
+        if coll is not None and type(coll).__name__ == "DashboardsCollection":
+            return coll
     return None
+
+
+async def _create_storage_dashboard(
+    hass: HomeAssistant, lovelace: Any, item_data: dict[str, Any]
+) -> None:
+    """Create a storage dashboard and wire it into the running instance.
+
+    Leaves ``lovelace.dashboards[url_path]`` populated so the caller can save
+    the copied config into it.
+    """
+    url_path = item_data["url_path"]
+
+    live = _find_live_dashboards_collection(hass)
+    if live is not None:
+        # The collection's change listener inserts the LovelaceStorage into
+        # lovelace.dashboards and registers the sidebar panel.
+        await live.async_create_item(item_data)
+        return
+
+    # Fallback: drive a fresh collection (persists to the same store) and wire
+    # the dashboard + panel ourselves, mirroring HA's internal listener.
+    from homeassistant.components import frontend
+    from homeassistant.components.lovelace.dashboard import (
+        DashboardsCollection,
+        LovelaceStorage,
+    )
+
+    collection = DashboardsCollection(hass)
+    await collection.async_load()
+    item = await collection.async_create_item(item_data)
+
+    lovelace.dashboards[url_path] = LovelaceStorage(hass, item)
+    try:
+        frontend.async_register_built_in_panel(
+            hass,
+            _LOVELACE_DOMAIN,
+            frontend_url_path=url_path,
+            require_admin=item.get("require_admin", False),
+            sidebar_title=item.get("title"),
+            sidebar_icon=item.get("icon", _DEFAULT_ICON),
+            show_in_sidebar=item.get("show_in_sidebar", True),
+            config={"mode": _MODE_STORAGE},
+            update=False,
+        )
+    except ValueError:
+        _LOGGER.warning("Could not register sidebar panel for %s", url_path)
 
 
 def _normalize_url_path(value: str) -> str:
@@ -146,20 +198,17 @@ async def async_perform_copy(
         source_url = source_key if source_key is not None else DEFAULT_SENTINEL
         _rewrite_navigation(new_config, source_url, new_url)
 
-    collection = _get_dashboards_collection(lovelace)
-    if collection is None:
-        _LOGGER.error("Could not locate the lovelace DashboardsCollection")
-        raise CopyError("create_failed")
-
     try:
-        await collection.async_create_item(
+        await _create_storage_dashboard(
+            hass,
+            lovelace,
             {
                 "url_path": new_url,
                 "title": new_title or new_url,
                 "icon": "mdi:content-copy",
                 "show_in_sidebar": True,
                 "require_admin": False,
-            }
+            },
         )
     except Exception as err:  # noqa: BLE001
         _LOGGER.error("Could not create dashboard %s: %s", new_url, err)
