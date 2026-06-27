@@ -2,27 +2,36 @@
   "config": {
     "step": {
       "user": {
-        "title": "Copier un dashboard",
-        "description": "Duplique un dashboard existant vers un nouveau.",
-        "data": {
-          "source": "Dashboard à copier",
-          "new_title": "Titre du nouveau dashboard",
-          "new_url_path": "URL (optionnel, ex : salon-copie)",
-          "update_links": "Réécrire les liens de navigation vers le nouveau dashboard"
-        }
+        "title": "Dashboard Copy",
+        "description": "Active l'action **Dashboard Copy** (service `dashboard_copy.copy`). Une fois configuré, lance-la depuis Outils de développement → Actions, ou depuis une automatisation, pour dupliquer un dashboard."
       }
     },
-    "error": {
-      "source_not_found": "Le dashboard sélectionné n'existe plus.",
-      "url_taken": "Cette URL est déjà utilisée par un autre dashboard.",
-      "load_failed": "Impossible de lire la configuration du dashboard source.",
-      "create_failed": "Impossible de créer le nouveau dashboard.",
-      "save_failed": "Le dashboard a été créé mais son contenu n'a pas pu être enregistré.",
-      "unknown": "Erreur inattendue. Consulte les logs Home Assistant."
-    },
     "abort": {
-      "no_dashboards": "Aucun dashboard copiable trouvé.",
-      "copy_successful": "Dashboard copié vers /{url}. Recharge la page (Ctrl+Maj+R) pour le voir dans la barre latérale."
+      "single_instance_allowed": "Déjà configuré. Une seule instance suffit — utilise l'action `dashboard_copy.copy` pour dupliquer des dashboards."
+    }
+  },
+  "services": {
+    "copy": {
+      "name": "Copier un dashboard",
+      "description": "Duplique un dashboard Lovelace existant vers un nouveau.",
+      "fields": {
+        "source": {
+          "name": "Dashboard source",
+          "description": "URL du dashboard à copier. Utilise « lovelace » pour le dashboard Overview par défaut."
+        },
+        "new_title": {
+          "name": "Nouveau titre",
+          "description": "Titre affiché dans la barre latérale pour le nouveau dashboard."
+        },
+        "new_url_path": {
+          "name": "Nouvelle URL",
+          "description": "Optionnel. Déduit du titre si laissé vide. Doit être un slug minuscule avec au moins un tiret."
+        },
+        "update_links": {
+          "name": "Réécrire les liens de navigation",
+          "description": "Réécrit les navigation_path pointant vers le dashboard source pour que la copie soit autonome."
+        }
+      }
     }
   }
 }

@@ -1,0 +1,38 @@
+copy:
+  name: Copy dashboard
+  description: Duplicate an existing Lovelace dashboard into a new one.
+  fields:
+    source:
+      name: Source dashboard
+      description: >-
+        URL path of the dashboard to copy (the part after /lovelace/ in the
+        address bar). Use "lovelace" for the default Overview dashboard.
+      required: true
+      example: lovelace
+      selector:
+        text:
+    new_title:
+      name: New title
+      description: Title shown in the sidebar for the new dashboard.
+      required: true
+      example: My copy
+      selector:
+        text:
+    new_url_path:
+      name: New URL path
+      description: >-
+        Optional. Auto-derived from the title if left blank. Must be a lowercase
+        slug containing at least one hyphen (a hyphen is added if missing).
+      required: false
+      example: my-copy
+      selector:
+        text:
+    update_links:
+      name: Rewrite navigation links
+      description: >-
+        Rewrite navigation_path values that point at the source dashboard so the
+        copy is self-contained. Relative anchors and external URLs are untouched.
+      required: false
+      default: true
+      selector:
+        boolean:

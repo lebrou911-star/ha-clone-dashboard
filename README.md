@@ -1,26 +1,24 @@
 # Dashboard Copy
 
 A small Home Assistant custom integration that **duplicates a Lovelace dashboard
-into a new one** — entirely from the UI, no YAML.
+into a new one** — via a service you call from the UI, no YAML editing.
 
 ## What it does
 
-Adds an "action-style" config flow. You pick:
+Adds a service **`dashboard_copy.copy`** (Developer Tools → Actions). Fields:
 
-- **Dashboard to copy** — a live dropdown of every existing dashboard (including
-  the default Overview).
-- **New dashboard title**.
-- **URL path** — optional; auto-derived from the title if left blank (a `-` is
-  added if needed, since HA requires it).
-- **Rewrite navigation links** — when enabled, any `navigation_path` in the
-  copied config that points at the *source* dashboard (e.g.
-  `/source-dash/view`) is rewritten to the *new* dashboard
+- **Source dashboard** (`source`) — URL path of the dashboard to copy (the part
+  after `/lovelace/`). Use `lovelace` for the default Overview.
+- **New title** (`new_title`).
+- **New URL path** (`new_url_path`) — optional; auto-derived from the title if
+  left blank (a `-` is added if needed, since HA requires it).
+- **Rewrite navigation links** (`update_links`, default on) — any
+  `navigation_path` in the copied config that points at the *source* dashboard
+  (e.g. `/source-dash/view`) is rewritten to the *new* dashboard
   (`/new-dash/view`), so the copy is self-contained. Relative anchors
   (Bubble Card `#pop-up`, intra-view `#view`) and external URLs are left alone.
 
-The flow performs the copy and then closes — it does **not** create a config
-entry, so nothing lingers. Run it again any time from
-**Settings → Devices & services → Add integration → Dashboard Copy**.
+The service returns the new dashboard's `url_path` as a response.
 
 ## Install (HACS)
 
@@ -28,7 +26,22 @@ entry, so nothing lingers. Run it again any time from
    `https://github.com/lebrou911-star/ha-clone-dashboard`, category **Integration**.
 2. Install **Dashboard Copy**.
 3. Restart Home Assistant.
-4. **Settings → Devices & services → Add integration → Dashboard Copy**.
+4. **Settings → Devices & services → Add integration → Dashboard Copy** (one-time;
+   this registers the service).
+
+## Usage
+
+**Developer Tools → Actions → `Dashboard Copy: Copy dashboard`**, fill the fields,
+and run. Or in YAML / an automation:
+
+```yaml
+action: dashboard_copy.copy
+data:
+  source: lovelace
+  new_title: My copy
+  new_url_path: my-copy   # optional
+  update_links: true
+```
 
 After a copy, hard-refresh the browser (Ctrl+Shift+R) to see the new dashboard
 in the sidebar.
